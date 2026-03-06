@@ -29,3 +29,8 @@ management:
     web:
       exposure:
         include: '*'
+jwt:
+  # Injecte la clé secrète depuis la variable d'environnement JWT_SECRET du fichier .env
+       secret: ${JWT_SECRET}
+  # Injecte la durée d'expiration depuis la variable d'environnement JWT_EXPIRATION du fichier .env
+       expiration: ${JWT_EXPIRATION}

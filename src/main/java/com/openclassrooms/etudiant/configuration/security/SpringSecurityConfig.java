@@ -14,6 +14,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -21,6 +22,9 @@ public class SpringSecurityConfig {
 
     @Autowired
     private CustomUserDetailService customUserDetailService;
+
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
@@ -31,7 +35,8 @@ public class SpringSecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
@@ -43,23 +48,24 @@ public class SpringSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(AbstractHttpConfigurer::disable)
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider())
-                .authorizeHttpRequests(authorize -> authorize
-                        // No auth needed on :
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/api/register", "/api/login").permitAll()
-                        // Others protected routes will be added here.
-                        .anyRequest().authenticated()
-                )
-                // .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(
-                        (request, response, exception) -> {
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, exception.getMessage());
-                        }));
+            .cors(AbstractHttpConfigurer::disable)
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(management ->
+                management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authenticationProvider(authenticationProvider())
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/api/register", "/api/login").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                (request, response, exception) -> {
+                    response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        exception.getMessage());
+                }));
         return http.build();
     }
-
 }
