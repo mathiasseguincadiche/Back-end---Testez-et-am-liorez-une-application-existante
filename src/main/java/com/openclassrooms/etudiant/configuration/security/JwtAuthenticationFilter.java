@@ -38,11 +38,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 3. Extraire le token (tout après "Bearer ")
-        final String jwt = authHeader.substring(7);
-        final String username = jwtService.extractUsername(jwt);
-
-        // 4. Vérifier et authentifier
+	// 3. Extraire le token (tout après "Bearer ")
+	final String jwt = authHeader.substring(7);
+	final String username;
+	try {
+   	 username = jwtService.extractUsername(jwt);
+	} catch (Exception e) {
+    	// Token invalide ou expiré → on laisse passer sans authentifier
+    	filterChain.doFilter(request, response);
+    	return;
+	}
+        
+	// 4. Vérifier et authentifier
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
             if (jwtService.isTokenValid(jwt, userDetails)) {
